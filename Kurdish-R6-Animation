@@ -1,3 +1,17 @@
+local GROUP_ID = 175907291
+local GroupService = game:GetService("GroupService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local plr = Players.LocalPlayer
+
+task.spawn(function()
+    task.wait(2)
+    if not plr:IsInGroup(GROUP_ID) then
+        pcall(function() GroupService:PromptJoinAsync(GROUP_ID) end)
+    end
+end)
+
 local Kurdish_r6_Animation = Instance.new("ScreenGui") -- The actual GUI
 local SideFrame = Instance.new("Frame") -- Visible when GUI is closed
 local OpenGUI = Instance.new("TextButton") -- Part of SideFrame
