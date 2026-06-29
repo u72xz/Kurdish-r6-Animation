@@ -781,18 +781,18 @@ FlingArms.TextSize = 20
 FlingArms.TextWrapped = true
  
 -- Buttons
-col = Color3.new(0.886275, 0.776471, 0.368627)
-loc = Color3.new(1, 0.906471, 0.568627)
-rcol = Color3.new(0.682353, 0.701961, 0.792157)
-rloc = Color3.new(0.882353, 0.901961, 0.992157)
+local col = Color3.new(0.886275, 0.776471, 0.368627)
+local loc = Color3.new(1, 0.906471, 0.568627)
+local rcol = Color3.new(0.682353, 0.701961, 0.792157)
+local rloc = Color3.new(0.882353, 0.901961, 0.992157)
  
-CloseGUI.MouseButton1Click:connect(function()
+CloseGUI.MouseButton1Click:Connect(function()
 MainFrame.Visible = false
 SideFrame.Visible = true
 SideFrame.Position = MainFrame.Position
 end)
  
-OpenGUI.MouseButton1Click:connect(function()
+OpenGUI.MouseButton1Click:Connect(function()
 MainFrame.Visible = true
 SideFrame.Visible = false
 MainFrame.Position = SideFrame.Position
@@ -808,928 +808,99 @@ else
     CheckR.Text = "Showing R6 Animations"
 end
  
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://35154961"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local HeadThrowACTIVE = false
-HeadThrow.MouseButton1Click:connect(function()
-    HeadThrowACTIVE = not HeadThrowACTIVE
-    if HeadThrowACTIVE then
-        HeadThrow.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if HeadThrowACTIVE then
-                track:Play(.1, 1, 1)
+
+-- Animation data table: {button, animId, isLoop, loopSpeed, color}
+local animations = {
+    -- R6 Animations
+    {HeadThrow,    "35154961",  true,  1,    false},
+    {FloatingHead, "121572214", false, 1,    false},
+    {Crouch,       "182724289", false, 1,    false},
+    {FloorCrawl,   "282574440", false, 1,    false},
+    {DinoWalk,     "204328711", false, 1,    false},
+    {JumpingJacks, "429681631", false, 1,    false},
+    {LoopHead,     "35154961",  true,  1e6,  false},
+    {HeroJump,     "184574340", true,  1,    false},
+    {Faint,        "181526230", false, 1,    false},
+    {FloorFaint,   "181525546", true,  2,    false},
+    {SuperFaint,   "181525546", true,  40,   false},
+    {Levitate,     "313762630", false, 1,    false},
+    {Dab,          "183412246", true,  1,    false},
+    {Spinner,      "188632011", true,  2,    false},
+    {FloatSit,     "179224234", false, 1,    false},
+    {MovingDance,  "429703734", true,  1,    false},
+    {WeirdMove,    "215384594", false, 1,    false},
+    {CloneIllusion,"215384594", false, 1e7,  false},
+    {GlitchLevitate,"313762630",false, 1e7,  false},
+    {SpinDance,    "429730430", true,  1,    false},
+    {MoonDance,    "45834924",  true,  1,    false},
+    {FullPunch,    "204062532", true,  1,    false},
+    {SpinDance2,   "186934910", true,  1,    false},
+    {BowDown,      "204292303", true,  3,    false},
+    {SwordSlam,    "204295235", true,  1,    false},
+    {LoopSlam,     "204295235", true,  1e4,  false},
+    {MegaInsane,   "184574340", true,  40,   false},
+    {SuperPunch,   "126753849", true,  3,    false},
+    {FullSwing,    "218504594", true,  1,    false},
+    {ArmTurbine,   "259438880", false, 1e3,  false},
+    {BarrelRoll,   "136801964", true,  1,    false},
+    {Scared,       "180612465", true,  1,    false},
+    {Insane,       "33796059",  false, 1e8,  false},
+    {ArmDetach,    "33169583",  true,  1e6,  false},
+    {SwordSlice,   "35978879",  false, 1,    false},
+    {InsaneArms,   "27432691",  true,  1e4,  false},
+    -- R15 Animations
+    {CrazySlash,   "674871189", true,  1,    true},
+    {Open,         "582855105", true,  1,    true},
+    {R15Spinner,   "754658275", true,  1,    true},
+    {ArmsOut,      "582384156", true,  1,    true},
+    {FloatSlash,   "717879555", true,  1,    true},
+    {WeirdZombie,  "708553116", true,  1,    true},
+    {DownSlash,    "746398327", true,  1,    true},
+    {Pull,         "675025795", true,  1,    true},
+    {CircleArm,    "698251653", true,  1,    true},
+    {Bend,         "696096087", true,  1,    true},
+    {RotateSlash,  "675025570", true,  1,    true},
+    {FlingArms,    "754656200", true,  10,   true},
+}
+
+local ACTIVE = {}
+local humanoid = game.Players.LocalPlayer.Character.Humanoid
+
+local function makeAnim(id)
+    local a = Instance.new("Animation")
+    a.AnimationId = "rbxassetid://" .. id
+    return humanoid:LoadAnimation(a)
+end
+
+for _, data in ipairs(animations) do
+    local btn, animId, isLoop, speed, isR15 = data[1], data[2], data[3], data[4], data[5]
+    local track = makeAnim(animId)
+    local activeColor = isR15 and rloc or loc
+    local normalColor = isR15 and rcol or col
+
+    ACTIVE[btn] = false
+
+    btn.MouseButton1Click:Connect(function()
+        ACTIVE[btn] = not ACTIVE[btn]
+        if ACTIVE[btn] then
+            btn.BackgroundColor3 = activeColor
+            if isLoop then
+                task.spawn(function()
+                    while ACTIVE[btn] do
+                        if not track.IsPlaying then
+                            track:Play(.1, 1, speed)
+                        end
+                        task.wait()
+                    end
+                end)
+            else
+                track:Play(.1, 1, speed)
             end
-         end
+        else
+            track:Stop()
+            btn.BackgroundColor3 = normalColor
         end
-    else
-        track:Stop()
-        HeadThrow.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://121572214"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FloatingHeadACTIVE = false
-FloatingHead.MouseButton1Click:connect(function()
-    FloatingHeadACTIVE = not FloatingHeadACTIVE
-    if FloatingHeadACTIVE then
-        track:Play(.1, 1, 1)
-        FloatingHead.BackgroundColor3 = loc
-    else
-        track:Stop()
-        FloatingHead.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://182724289"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local CrouchACTIVE = false
-Crouch.MouseButton1Click:connect(function()
-    CrouchACTIVE = not CrouchACTIVE
-    if CrouchACTIVE then
-        track:Play(.1, 1, 1)
-        Crouch.BackgroundColor3 = loc
-    else
-        track:Stop()
-        Crouch.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://282574440"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FloorCrawlACTIVE = false
-FloorCrawl.MouseButton1Click:connect(function()
-    FloorCrawlACTIVE = not FloorCrawlACTIVE
-    if FloorCrawlACTIVE then
-        track:Play(.1, 1, 1)
-        FloorCrawl.BackgroundColor3 = loc
-    else
-        track:Stop()
-        FloorCrawl.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://204328711"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local DinoWalkACTIVE = false
-DinoWalk.MouseButton1Click:connect(function()
-    DinoWalkACTIVE = not DinoWalkACTIVE
-    if DinoWalkACTIVE then
-        track:Play(.1, 1, 1)
-        DinoWalk.BackgroundColor3 = loc
-    else
-        track:Stop()
-        DinoWalk.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://429681631"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local JumpingJacksACTIVE = false
-JumpingJacks.MouseButton1Click:connect(function()
-    JumpingJacksACTIVE = not JumpingJacksACTIVE
-    if JumpingJacksACTIVE then
-        track:Play(.1, 1, 1)
-        JumpingJacks.BackgroundColor3 = loc
-    else
-        track:Stop()
-        JumpingJacks.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://35154961"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local LoopHeadACTIVE = false
-LoopHead.MouseButton1Click:connect(function()
-    LoopHeadACTIVE = not LoopHeadACTIVE
-    if LoopHeadACTIVE then
-        LoopHead.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if LoopHeadACTIVE then
-                track:Play(.5, 1, 1e6)
-            end
-         end
-        end
-    else
-        track:Stop()
-        LoopHead.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://184574340"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local HeroJumpACTIVE = false
-HeroJump.MouseButton1Click:connect(function()
-    HeroJumpACTIVE = not HeroJumpACTIVE
-    if HeroJumpACTIVE then
-        HeroJump.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if HeroJumpACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        HeroJump.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://181526230"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FaintACTIVE = false
-Faint.MouseButton1Click:connect(function()
-    FaintACTIVE = not FaintACTIVE
-    if FaintACTIVE then
-        track:Play(.1, 1, 1)
-        Faint.BackgroundColor3 = loc
-    else
-        track:Stop()
-        Faint.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://181525546"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FloorFaintACTIVE = false
-FloorFaint.MouseButton1Click:connect(function()
-    FloorFaintACTIVE = not FloorFaintACTIVE
-    if FloorFaintACTIVE then
-        FloorFaint.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if FloorFaintACTIVE then
-                track:Play(.1, 1, 2)
-            end
-         end
-        end
-    else
-        track:Stop()
-        FloorFaint.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://181525546"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SuperFaintACTIVE = false
-SuperFaint.MouseButton1Click:connect(function()
-    SuperFaintACTIVE = not SuperFaintACTIVE
-    if SuperFaintACTIVE then
-        SuperFaint.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if SuperFaintACTIVE then
-                track:Play(.1, 0.5, 40)
-            end
-         end
-        end
-    else
-        track:Stop()
-        SuperFaint.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://313762630"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local LevitateACTIVE = false
-Levitate.MouseButton1Click:connect(function()
-    LevitateACTIVE = not LevitateACTIVE
-    if LevitateACTIVE then
-        track:Play(.1, 1, 1)
-        Levitate.BackgroundColor3 = loc
-    else
-        track:Stop()
-        Levitate.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://183412246"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local DabACTIVE = false
-Dab.MouseButton1Click:connect(function()
-    DabACTIVE = not DabACTIVE
-    if DabACTIVE then
-        Dab.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if DabACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        Dab.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://188632011"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SpinACTIVE = false
-Spinner.MouseButton1Click:connect(function()
-    SpinACTIVE = not SpinACTIVE
-    if SpinACTIVE then
-        Spinner.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if SpinACTIVE then
-                track:Play(.1, 1, 2)
-            end
-         end
-        end
-    else
-        track:Stop()
-        Spinner.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://179224234"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FloatSitACTIVE = false
-FloatSit.MouseButton1Click:connect(function()
-    FloatSitACTIVE = not FloatSitACTIVE
-    if FloatSitACTIVE then
-        track:Play(.1, 1, 1)
-        FloatSit.BackgroundColor3 = loc
-    else
-        track:Stop()
-        FloatSit.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://429703734"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local MovingDanceACTIVE = false
-MovingDance.MouseButton1Click:connect(function()
-    MovingDanceACTIVE = not MovingDanceACTIVE
-    if MovingDanceACTIVE then
-        MovingDance.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if MovingDanceACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        MovingDance.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://215384594"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local WeirdMoveACTIVE = false
-WeirdMove.MouseButton1Click:connect(function()
-    WeirdMoveACTIVE = not WeirdMoveACTIVE
-    if WeirdMoveACTIVE then
-        track:Play(.1, 1, 1)
-        WeirdMove.BackgroundColor3 = loc
-    else
-        track:Stop()
-        WeirdMove.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://215384594"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local CloneIllusionACTIVE = false
-CloneIllusion.MouseButton1Click:connect(function()
-    CloneIllusionACTIVE = not CloneIllusionACTIVE
-    if CloneIllusionACTIVE then
-        track:Play(.5, 1, 1e7)
-        CloneIllusion.BackgroundColor3 = loc
-    else
-        track:Stop()
-        CloneIllusion.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://313762630"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local GlitchLevitateACTIVE = false
-GlitchLevitate.MouseButton1Click:connect(function()
-    GlitchLevitateACTIVE = not GlitchLevitateACTIVE
-    if GlitchLevitateACTIVE then
-        track:Play(.5, 1, 1e7)
-        GlitchLevitate.BackgroundColor3 = loc
-    else
-        track:Stop()
-        GlitchLevitate.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://429730430"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SpinDanceACTIVE = false
-SpinDance.MouseButton1Click:connect(function()
-    SpinDanceACTIVE = not SpinDanceACTIVE
-    if SpinDanceACTIVE then
-        SpinDance.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if SpinDanceACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        SpinDance.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://45834924"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local MoonDanceACTIVE = false
-MoonDance.MouseButton1Click:connect(function()
-    MoonDanceACTIVE = not MoonDanceACTIVE
-    if MoonDanceACTIVE then
-        MoonDance.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if MoonDanceACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        MoonDance.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://204062532"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FullPunchACTIVE = false
-FullPunch.MouseButton1Click:connect(function()
-    FullPunchACTIVE = not FullPunchACTIVE
-    if FullPunchACTIVE then
-        FullPunch.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if FullPunchACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        FullPunch.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://186934910"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SpinDance2ACTIVE = false
-SpinDance2.MouseButton1Click:connect(function()
-    SpinDance2ACTIVE = not SpinDance2ACTIVE
-    if SpinDance2ACTIVE then
-        SpinDance2.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if SpinDance2ACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        SpinDance2.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://204292303"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local BowDownACTIVE = false
-BowDown.MouseButton1Click:connect(function()
-    BowDownACTIVE = not BowDownACTIVE
-    if BowDownACTIVE then
-        BowDown.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if BowDownACTIVE then
-                track:Play(.1, 1, 3)
-            end
-         end
-        end
-    else
-        track:Stop()
-        BowDown.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://204295235"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SwordSlamACTIVE = false
-SwordSlam.MouseButton1Click:connect(function()
-    SwordSlamACTIVE = not SwordSlamACTIVE
-    if SwordSlamACTIVE then
-        SwordSlam.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if SwordSlamACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        SwordSlam.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://204295235"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local LoopSlamACTIVE = false
-LoopSlam.MouseButton1Click:connect(function()
-    LoopSlamACTIVE = not LoopSlamACTIVE
-    if LoopSlamACTIVE then
-        LoopSlam.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if LoopSlamACTIVE then
-                track:Play(.1, 1, 1e4)
-            end
-         end
-        end
-    else
-        track:Stop()
-        LoopSlam.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://184574340"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local MegaInsaneACTIVE = false
-MegaInsane.MouseButton1Click:connect(function()
-    MegaInsaneACTIVE = not MegaInsaneACTIVE
-    if MegaInsaneACTIVE then
-        MegaInsane.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if MegaInsaneACTIVE then
-                track:Play(.1, 0.5, 40)
-            end
-         end
-        end
-    else
-        track:Stop()
-        MegaInsane.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://126753849"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SuperPunchACTIVE = false
-SuperPunch.MouseButton1Click:connect(function()
-    SuperPunchACTIVE = not SuperPunchACTIVE
-    if SuperPunchACTIVE then
-        SuperPunch.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if SuperPunchACTIVE then
-                track:Play(.1, 1, 3)
-            end
-         end
-        end
-    else
-        track:Stop()
-        SuperPunch.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://218504594"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FullSwingACTIVE = false
-FullSwing.MouseButton1Click:connect(function()
-    FullSwingACTIVE = not FullSwingACTIVE
-    if FullSwingACTIVE then
-        FullSwing.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if FullSwingACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        FullSwing.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://259438880"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local ArmTurbineACTIVE = false
-ArmTurbine.MouseButton1Click:connect(function()
-    ArmTurbineACTIVE = not ArmTurbineACTIVE
-    if ArmTurbineACTIVE then
-        track:Play(.1, 1, 1e3)
-        ArmTurbine.BackgroundColor3 = loc
-    else
-        track:Stop()
-        ArmTurbine.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://136801964"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local BarrelRollACTIVE = false
-BarrelRoll.MouseButton1Click:connect(function()
-    BarrelRollACTIVE = not BarrelRollACTIVE
-    if BarrelRollACTIVE then
-        BarrelRoll.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if BarrelRollACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        BarrelRoll.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://180612465"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local ScaredACTIVE = false
-Scared.MouseButton1Click:connect(function()
-    ScaredACTIVE = not ScaredACTIVE
-    if ScaredACTIVE then
-        Scared.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if ScaredACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        Scared.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://33796059"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local InsaneACTIVE = false
-Insane.MouseButton1Click:connect(function()
-    InsaneACTIVE = not InsaneACTIVE
-    if InsaneACTIVE then
-        track:Play(.1, 1, 1e8)
-        Insane.BackgroundColor3 = loc
-    else
-        track:Stop()
-        Insane.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://33169583"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local ArmDetachACTIVE = false
-ArmDetach.MouseButton1Click:connect(function()
-    ArmDetachACTIVE = not ArmDetachACTIVE
-    if ArmDetachACTIVE then
-        ArmDetach.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if ArmDetachACTIVE then
-                track:Play(.1, 1, 1e6)
-            end
-         end
-        end
-    else
-        track:Stop()
-        ArmDetach.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://35978879"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local SwordSliceACTIVE = false
-SwordSlice.MouseButton1Click:connect(function()
-    SwordSliceACTIVE = not SwordSliceACTIVE
-    if SwordSliceACTIVE then
-        track:Play(.1, 1, 1)
-        SwordSlice.BackgroundColor3 = loc
-    else
-        track:Stop()
-        SwordSlice.BackgroundColor3 = col
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://27432691"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local InsaneArmsACTIVE = false
-InsaneArms.MouseButton1Click:connect(function()
-    InsaneArmsACTIVE = not InsaneArmsACTIVE
-    if InsaneArmsACTIVE then
-        InsaneArms.BackgroundColor3 = loc
-        while wait() do
-         if track.IsPlaying == false then
-            if InsaneArmsACTIVE then
-                track:Play(.1, 1, 1e4)
-            end
-         end
-        end
-    else
-        track:Stop()
-        InsaneArms.BackgroundColor3 = col
-    end
-end)
--- R15
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://674871189"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local CrazySlashACTIVE = false
-CrazySlash.MouseButton1Click:connect(function()
-    CrazySlashACTIVE = not CrazySlashACTIVE
-    if CrazySlashACTIVE then
-        CrazySlash.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if CrazySlashACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        CrazySlash.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://582855105"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local OpenACTIVE = false
-Open.MouseButton1Click:connect(function()
-    OpenACTIVE = not OpenACTIVE
-    if OpenACTIVE then
-        Open.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if OpenACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        Open.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://754658275"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local R15SpinnerACTIVE = false
-R15Spinner.MouseButton1Click:connect(function()
-    R15SpinnerACTIVE = not R15SpinnerACTIVE
-    if R15SpinnerACTIVE then
-        R15Spinner.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if R15SpinnerACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        R15Spinner.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://582384156"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local ArmsOutACTIVE = false
-ArmsOut.MouseButton1Click:connect(function()
-    ArmsOutACTIVE = not ArmsOutACTIVE
-    if ArmsOutACTIVE then
-        ArmsOut.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if ArmsOutACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        ArmsOut.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://717879555"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-local FloatSlashACTIVE = false
-FloatSlash.MouseButton1Click:connect(function()
-    FloatSlashACTIVE = not FloatSlashACTIVE
-    if FloatSlashACTIVE then
-        FloatSlash.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if FloatSlashACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        FloatSlash.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://708553116"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-WeirdZombieACTIVE = false
-WeirdZombie.MouseButton1Click:connect(function()
-    WeirdZombieACTIVE = not WeirdZombieACTIVE
-    if WeirdZombieACTIVE then
-        WeirdZombie.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if WeirdZombieACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        WeirdZombie.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://746398327"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-DownSlashACTIVE = false
-DownSlash.MouseButton1Click:connect(function()
-    DownSlashACTIVE = not DownSlashACTIVE
-    if DownSlashACTIVE then
-        DownSlash.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if DownSlashACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        DownSlash.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://675025795"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-PullACTIVE = false
-Pull.MouseButton1Click:connect(function()
-    PullACTIVE = not PullACTIVE
-    if PullACTIVE then
-        Pull.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if PullACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        Pull.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://698251653"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-CircleArmACTIVE = false
-CircleArm.MouseButton1Click:connect(function()
-    CircleArmACTIVE = not CircleArmACTIVE
-    if CircleArmACTIVE then
-        CircleArm.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if CircleArmACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        CircleArm.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://696096087"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-BendACTIVE = false
-Bend.MouseButton1Click:connect(function()
-    BendACTIVE = not BendACTIVE
-    if BendACTIVE then
-        Bend.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if BendACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        Bend.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://675025570"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-RotateSlashACTIVE = false
-RotateSlash.MouseButton1Click:connect(function()
-    RotateSlashACTIVE = not RotateSlashACTIVE
-    if RotateSlashACTIVE then
-        RotateSlash.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if RotateSlashACTIVE then
-                track:Play(.1, 1, 1)
-            end
-         end
-        end
-    else
-        track:Stop()
-        RotateSlash.BackgroundColor3 = rcol
-    end
-end)
- 
-local Anim = Instance.new("Animation")
-Anim.AnimationId = "rbxassetid://754656200"
-local track = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
-FlingArmsACTIVE = false
-FlingArms.MouseButton1Click:connect(function()
-    FlingArmsACTIVE = not FlingArmsACTIVE
-    if FlingArmsACTIVE then
-        FlingArms.BackgroundColor3 = rloc
-        while wait() do
-         if track.IsPlaying == false then
-            if FlingArmsACTIVE then
-                track:Play(.1, 1, 10)
-            end
-         end
-        end
-    else
-        track:Stop()
-        FlingArms.BackgroundColor3 = rcol
-    end
-end)
- 
+    end)
+end
+
 -- Finished update!
